@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/csye7125-sp25-team05/api-server/compare/v1.0.0...v1.0.1) (2025-03-12)
+
+
+### Bug Fixes
+
+* Update Jenkinsfile ([372467b](https://github.com/csye7125-sp25-team05/api-server/commit/372467b441ecedec22323e7a9f0767b76fba0184))
+
 # 1.0.0 (2025-03-12)
 
 

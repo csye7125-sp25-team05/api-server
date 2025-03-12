@@ -1,6 +1,6 @@
 {
   "name": "api-server-fork",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "test\r ### Introduction",
   "main": "index.js",
   "scripts": {
