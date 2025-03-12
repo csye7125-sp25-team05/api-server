@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        registry = "mayu007/cyse7125-sp25-05.rocks"
+        registry = "mayu007/backend-api"
         DOCKER_ID = 'mayu007'
         imageName = "go-app"
     }
@@ -33,7 +33,7 @@ pipeline {
                         sh 'echo $DOCKER_PASSWORD | docker login -u $DOCKER_ID --password-stdin'
                         sh 'docker buildx rm newbuilderx || true'
                         sh 'docker buildx create --use --name newbuilderx --driver docker-container'
-                        sh "docker buildx build --file Dockerfile --platform linux/amd64,linux/arm64 -t ${registry}:${latestTag} --push ."
+                        sh "docker buildx build --file Dockerfile --platform linux/amd64,linux/arm64 -t ${registry}/${imageName}:${latestTag} --push ."
                         sh 'docker buildx rm newbuilderx'
                     }
                 }
