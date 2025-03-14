@@ -7,10 +7,16 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	fmt.Println("Starting API server...")
 	db, err := sql.Open("postgres", "user=postgres dbname=api options=-csearch_path=api,public sslmode=disable")
 	if err != nil {
