@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-server
+  namespace: api-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api-server
+  template:
+    metadata:
+      labels:
+        app: api-server
+    spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: ['sh', '-c', 'until nc -z postgres-service 5432; do echo waiting for postgres; sleep 2; done;']
+        - name: flyway-migration
+          image: sataomayu/api:t1
+          imagePullPolicy: Always
+          command: ["flyway", "migrate", "-validateMigrationNaming=true"]
+          env:
+          - name: FLYWAY_URL
+            value: jdbc:postgresql://postgres-service:5432/api-server
+          - name: FLYWAY_USER
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secrets
+                key: POSTGRES_USER
+          - name: FLYWAY_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: postgres-secrets
+                key: POSTGRES_PASSWORD
+
+      serviceAccountName: api-server-sa
+      containers:
+      - name: api-server
+        image: mayu007/api-server:t3
+        ports:
+        - containerPort: 8080
+        env:
+        - name: ENVIRONMENT
+          value: "prod"
+        - name: BUCKET_NAME
+          value: "csye7125-sp25-05"
+        - name: PROJECT_ID
+          value: "csye7125-project-dev"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+      imagePullSecrets:
+      - name: docker-registry-auth
