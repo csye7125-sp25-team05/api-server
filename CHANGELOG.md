@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/csye7125-sp25-team05/api-server/compare/v1.0.2...v1.1.0) (2025-03-14)
+
+
+### Features
+
+* added k8s files ([dfd40ac](https://github.com/csye7125-sp25-team05/api-server/commit/dfd40ac63bea5c0d03327c514a1aedbdd376b0ad))
+
 ## [1.0.2](https://github.com/csye7125-sp25-team05/api-server/compare/v1.0.1...v1.0.2) (2025-03-14)
 
 
