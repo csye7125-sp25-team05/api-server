@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"net/http"
 
 	"api-server/internal/handlers"
 
@@ -10,9 +11,12 @@ import (
 
 func SetupRoutes(db *sql.DB) *mux.Router {
 	router := mux.NewRouter()
-	ir := handlers.NewInstructorHandler(db)
+
+	// Health check endpoint
+	router.HandleFunc("/health", HealthCheckHandler(db)).Methods("GET")
 
 	// Instructor Routes
+	ir := handlers.NewInstructorHandler(db)
 	router.HandleFunc("/instructors", ir.GetInstructors).Methods("GET")
 	router.HandleFunc("/instructors/{id}", ir.GetInstructorByID).Methods("GET")
 	router.HandleFunc("/instructors", ir.CreateInstructor).Methods("POST")
@@ -44,4 +48,20 @@ func SetupRoutes(db *sql.DB) *mux.Router {
 	router.HandleFunc("/traces/{id}", traceHandler.DeleteTrace).Methods("DELETE")
 
 	return router
+}
+
+// HealthCheckHandler returns the health status of the application
+func HealthCheckHandler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		// Check database connectivity
+		if err := db.Ping(); err != nil {
+			http.Error(w, "Database connection failed", http.StatusServiceUnavailable)
+			return
+		}
+
+		// Optionally, add more health checks (e.g., GCS connectivity)
+		// For now, just return 200 OK if the database is reachable
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("OK"))
+	}
 }

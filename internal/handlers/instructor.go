@@ -21,6 +21,8 @@ func NewInstructorHandler(db *sql.DB) *InstructorHandler {
 }
 
 func (ih *InstructorHandler) GetInstructors(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	instructors, err := ih.ir.GetAllInstructors()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -30,6 +32,8 @@ func (ih *InstructorHandler) GetInstructors(w http.ResponseWriter, r *http.Reque
 }
 
 func (ih *InstructorHandler) GetInstructorByID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
@@ -45,6 +49,8 @@ func (ih *InstructorHandler) GetInstructorByID(w http.ResponseWriter, r *http.Re
 }
 
 func (ih *InstructorHandler) CreateInstructor(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	var instructor model.Instructor
 	err := json.NewDecoder(r.Body).Decode(&instructor)
 	if err != nil {
@@ -60,6 +66,8 @@ func (ih *InstructorHandler) CreateInstructor(w http.ResponseWriter, r *http.Req
 }
 
 func (ih *InstructorHandler) UpdateInstructor(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
@@ -81,6 +89,8 @@ func (ih *InstructorHandler) UpdateInstructor(w http.ResponseWriter, r *http.Req
 }
 
 func (ih *InstructorHandler) DeleteInstructor(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
