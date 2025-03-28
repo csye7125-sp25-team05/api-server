@@ -1,5 +1,5 @@
 # api-server
-test2
+test
 ### Introduction
 
 This repository contains the API server for handling user interactions. It is built using Go and utilizes PostgreSQL as the relational database. Database migrations are managed using Flyway.
