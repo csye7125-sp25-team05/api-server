@@ -119,6 +119,8 @@ func NewTraceHandler(db *sql.DB) *TraceHandler {
 // }
 
 func (th *TraceHandler) GetTraces(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	traces, err := th.tr.GetAllTraces()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -128,6 +130,8 @@ func (th *TraceHandler) GetTraces(w http.ResponseWriter, r *http.Request) {
 }
 
 func (th *TraceHandler) GetTraceByID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 	id, err := uuid.Parse(idStr)
@@ -144,6 +148,8 @@ func (th *TraceHandler) GetTraceByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -276,6 +282,8 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 // }
 
 func (th *TraceHandler) UpdateTrace(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 	id, err := uuid.Parse(idStr)
@@ -298,6 +306,8 @@ func (th *TraceHandler) UpdateTrace(w http.ResponseWriter, r *http.Request) {
 }
 
 func (th *TraceHandler) DeleteTrace(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 	id, err := uuid.Parse(idStr)

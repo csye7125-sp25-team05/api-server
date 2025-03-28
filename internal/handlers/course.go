@@ -21,6 +21,8 @@ func NewCourseHandler(db *sql.DB) *CourseHandler {
 }
 
 func (ch *CourseHandler) GetCourses(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	courses, err := ch.cr.GetAllCourses()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -30,6 +32,8 @@ func (ch *CourseHandler) GetCourses(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ch *CourseHandler) GetCourseByID(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 	id, err := uuid.Parse(idStr)
@@ -46,6 +50,8 @@ func (ch *CourseHandler) GetCourseByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ch *CourseHandler) CreateCourse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	var course model.Course
 	err := json.NewDecoder(r.Body).Decode(&course)
 	if err != nil {
@@ -61,6 +67,8 @@ func (ch *CourseHandler) CreateCourse(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ch *CourseHandler) UpdateCourse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 	id, err := uuid.Parse(idStr)
@@ -83,6 +91,8 @@ func (ch *CourseHandler) UpdateCourse(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ch *CourseHandler) DeleteCourse(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+
 	vars := mux.Vars(r)
 	idStr := vars["id"]
 	id, err := uuid.Parse(idStr)
