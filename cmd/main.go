@@ -31,7 +31,7 @@ func main() {
 	// Construct the connection string
 	connStr := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=disable options=-csearch_path=api,public",
 		dbUser, dbPassword, dbHost, dbPort, dbName)
-
+	fmt.Println("🔌 DB Connection String:", connStr)
 	db, err := sql.Open("postgres", connStr)
 
 	if err != nil {
