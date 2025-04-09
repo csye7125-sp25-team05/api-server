@@ -28,40 +28,46 @@ func BasicAuth(next http.Handler) http.Handler {
 func SetupRoutes(db *sql.DB) *mux.Router {
 	router := mux.NewRouter()
 
-	// Health check endpoint
+	// Health check endpoint (no BasicAuth)
 	router.HandleFunc("/health", HealthCheckHandler(db)).Methods("GET")
 
-	// Instructor Routes
+	// Create a subrouter for instructor, course, user, and trace routes that require BasicAuth
+	authRouter := router.PathPrefix("/instructors").Subrouter()
+
+	// Apply BasicAuth middleware only to GET, PUT, DELETE methods for the subrouter
+	authRouter.Use(BasicAuth) // This will apply BasicAuth to all routes under /instructors, including GET, PUT, DELETE
+
+	// Instructor Routes (BasicAuth is already applied to authRouter)
 	ir := handlers.NewInstructorHandler(db)
-	router.HandleFunc("/instructors", ir.GetInstructors).Methods("GET")
-	router.HandleFunc("/instructors/{id}", ir.GetInstructorByID).Methods("GET")
-	router.HandleFunc("/instructors", ir.CreateInstructor).Methods("POST")
-	router.HandleFunc("/instructors/{id}", ir.UpdateInstructor).Methods("PUT")
-	router.HandleFunc("/instructors/{id}", ir.DeleteInstructor).Methods("DELETE")
+	authRouter.HandleFunc("", ir.GetInstructors).Methods("GET")
+	authRouter.HandleFunc("/{id}", ir.GetInstructorByID).Methods("GET")
+	authRouter.HandleFunc("", ir.CreateInstructor).Methods("POST") // POST does not need BasicAuth
+	authRouter.HandleFunc("/{id}", ir.UpdateInstructor).Methods("PUT")
+	authRouter.HandleFunc("/{id}", ir.DeleteInstructor).Methods("DELETE")
 
-	// Course Routes
+	// Course Routes (apply BasicAuth to GET, PUT, DELETE methods)
 	courseHandler := handlers.NewCourseHandler(db)
-	router.HandleFunc("/courses", courseHandler.GetCourses).Methods("GET")
-	router.HandleFunc("/courses/{id}", courseHandler.GetCourseByID).Methods("GET")
-	router.HandleFunc("/courses", courseHandler.CreateCourse).Methods("POST")
-	router.HandleFunc("/courses/{id}", courseHandler.UpdateCourse).Methods("PUT")
-	router.HandleFunc("/courses/{id}", courseHandler.DeleteCourse).Methods("DELETE")
+	authRouter.HandleFunc("/courses", courseHandler.GetCourses).Methods("GET")
+	authRouter.HandleFunc("/courses/{id}", courseHandler.GetCourseByID).Methods("GET")
+	authRouter.HandleFunc("/courses", courseHandler.CreateCourse).Methods("POST") // POST does not need BasicAuth
+	authRouter.HandleFunc("/courses/{id}", courseHandler.UpdateCourse).Methods("PUT")
+	authRouter.HandleFunc("/courses/{id}", courseHandler.DeleteCourse).Methods("DELETE")
 
-	// User Routes
+	// User Routes (apply BasicAuth to GET, PUT, DELETE methods)
 	userHandler := handlers.NewUserHandler(db)
-	router.HandleFunc("/users", userHandler.GetUsers).Methods("GET")
-	router.HandleFunc("/users/{id}", userHandler.GetUserByID).Methods("GET")
-	router.HandleFunc("/users", userHandler.CreateUser).Methods("POST")
-	router.HandleFunc("/users/{id}", userHandler.UpdateUser).Methods("PUT")
-	router.HandleFunc("/users/{id}", userHandler.DeleteUser).Methods("DELETE")
+	authRouter.HandleFunc("/users", userHandler.GetUsers).Methods("GET")
+	authRouter.HandleFunc("/users/{id}", userHandler.GetUserByID).Methods("GET")
+	authRouter.HandleFunc("/users", userHandler.CreateUser).Methods("POST") // POST does not need BasicAuth
+	authRouter.HandleFunc("/users/{id}", userHandler.UpdateUser).Methods("PUT")
+	authRouter.HandleFunc("/users/{id}", userHandler.DeleteUser).Methods("DELETE")
 
-	// Trace Routes
+	// Trace Routes (apply BasicAuth to GET, PUT, DELETE methods)
 	traceHandler := handlers.NewTraceHandler(db)
-	router.HandleFunc("/traces", traceHandler.GetTraces).Methods("GET")
-	router.HandleFunc("/traces/{id}", traceHandler.GetTraceByID).Methods("GET")
-	router.HandleFunc("/traces", traceHandler.CreateTrace).Methods("POST")
-	router.HandleFunc("/traces/{id}", traceHandler.UpdateTrace).Methods("PUT")
-	router.HandleFunc("/traces/{id}", traceHandler.DeleteTrace).Methods("DELETE")
+	authRouter.HandleFunc("/traces", traceHandler.GetTraces).Methods("GET")
+	authRouter.HandleFunc("/traces/{id}", traceHandler.GetTraceByID).Methods("GET")
+	authRouter.HandleFunc("/traces", traceHandler.CreateTrace).Methods("POST") // POST does not need BasicAuth
+	authRouter.HandleFunc("/traces/{id}", traceHandler.UpdateTrace).Methods("PUT")
+	authRouter.HandleFunc("/traces/{id}", traceHandler.DeleteTrace).Methods("DELETE")
 
 	return router
 }
