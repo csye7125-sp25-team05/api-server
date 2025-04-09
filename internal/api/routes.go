@@ -3,11 +3,27 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"os"
 
 	"api-server/internal/handlers"
 
 	"github.com/gorilla/mux"
 )
+
+func BasicAuth(next http.Handler) http.Handler {
+	username := os.Getenv("BASIC_AUTH_USERNAME")
+	password := os.Getenv("BASIC_AUTH_PASSWORD")
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		u, p, ok := r.BasicAuth()
+		if !ok || u != username || p != password {
+			w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func SetupRoutes(db *sql.DB) *mux.Router {
 	router := mux.NewRouter()
