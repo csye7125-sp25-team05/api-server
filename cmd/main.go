@@ -15,7 +15,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Println("Warning: Error loading .env file, relying on environment variables:", err)
 	}
 
 	fmt.Println("Starting API server...")
