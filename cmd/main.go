@@ -2,7 +2,8 @@ package main
 
 import (
 	"api-server/internal/api"
-	"database/sql"
+	"api-server/internal/otel"
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,11 +11,15 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/XSAM/otelsql"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.28.0"
 )
 
 var (
@@ -73,6 +78,19 @@ func main() {
 	}
 
 	fmt.Println("Starting API server...")
+
+	// Initialize OpenTelemetry
+	ctx := context.Background()
+	shutdown, err := otel.SetupOTelSDK(ctx)
+	if err != nil {
+		log.Fatalf("Failed to initialize OpenTelemetry: %v", err)
+	}
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			log.Printf("Error shutting down OpenTelemetry: %v", err)
+		}
+	}()
+
 	// db, err := sql.Open("postgres", "user=postgres dbname=api options=-csearch_path=api,public sslmode=disable")
 
 	// Get database connection details from environment variables
@@ -86,21 +104,42 @@ func main() {
 	connStr := fmt.Sprintf("user=%s password=%s host=%s port=%s dbname=%s sslmode=disable options=-csearch_path=api,public",
 		dbUser, dbPassword, dbHost, dbPort, dbName)
 	fmt.Println("🔌 DB Connection String:", connStr)
-	db, err := sql.Open("postgres", connStr)
+	// db, err := sql.Open("postgres", connStr)
+	// if err != nil {
+	// 	log.Fatalf("Failed to open database connection: %v", err)
+	// }
+	// defer db.Close()
+
+	// Open database with OpenTelemetry instrumentation
+	db, err := otelsql.Open("postgres", connStr,
+		otelsql.WithAttributes(
+			semconv.DBSystemPostgreSQL,
+			attribute.String("db.name", dbName),
+		),
+	)
 	if err != nil {
 		log.Fatalf("Failed to open database connection: %v", err)
 	}
 	defer db.Close()
 
-	// Test database connection
-	fmt.Println("Testing database connection...")
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
+	// Register database driver for OpenTelemetry metrics
+	err = otelsql.RegisterDBStatsMetrics(db,
+		otelsql.WithAttributes(semconv.DBSystemPostgreSQL),
+	)
+	if err != nil {
+		log.Fatalf("Failed to register database metrics: %v", err)
 	}
+
+	// // Test database connection
+	// fmt.Println("Testing database connection...")
+	// if err := db.Ping(); err != nil {
+	// 	log.Fatalf("Failed to ping database: %v", err)
+	// }
 	fmt.Println("Database connection successful")
 
 	// Set up router with middleware for metrics
 	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("api-server"))
 
 	// Middleware to record request metrics
 	router.Use(func(next http.Handler) http.Handler {

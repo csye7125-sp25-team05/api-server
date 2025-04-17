@@ -20,6 +20,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"google.golang.org/api/option"
 	monitoredrespb "google.golang.org/genproto/googleapis/api/monitoredres"
 )
@@ -231,6 +234,11 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 		Severity: logging.Info,
 		Payload:  "Starting trace creation",
 	})
+
+	// Start a new span
+	ctx, span := otel.Tracer("api-server").Start(r.Context(), "CreateTrace")
+	defer span.End()
+
 	// Debug: Log request details
 	th.logger.Log(logging.Entry{
 		Severity: logging.Debug,
@@ -243,6 +251,8 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 			Severity: logging.Warning,
 			Payload:  fmt.Sprintf("Failed to get file from form: %v", err),
 		})
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -253,9 +263,16 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 			Severity: logging.Warning,
 			Payload:  fmt.Sprintf("Invalid file: must be a PDF, got: %s", header.Filename),
 		})
+		span.SetStatus(codes.Error, "Invalid file: must be a PDF")
 		http.Error(w, "Only PDF files are allowed", http.StatusBadRequest)
 		return
 	}
+	// Add file attributes to the span
+	span.SetAttributes(
+		attribute.String("file.name", header.Filename),
+		attribute.Int64("file.size", header.Size),
+	)
+
 	// Debug: Log file details
 	th.logger.Log(logging.Entry{
 		Severity: logging.Debug,
@@ -277,6 +294,8 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 				Severity: logging.Warning,
 				Payload:  fmt.Sprintf("Invalid user_id format: %v", err),
 			})
+			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			http.Error(w, "Invalid user_id format", http.StatusBadRequest)
 			return
 		}
@@ -294,6 +313,8 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 		Payload:  fmt.Sprintf("Uploading to bucket: %s, object: %s", bucketName, objectName),
 	})
 
+	// Create a child span for GCS upload
+	_, uploadSpan := otel.Tracer("api-server").Start(ctx, "UploadToGCS")
 	wc := th.client.Bucket(bucketName).Object(objectName).NewWriter(th.ctx)
 	wc.ContentType = header.Header.Get("Content-Type")
 	// Debug: Log upload start
@@ -306,6 +327,11 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 			Severity: logging.Error,
 			Payload:  fmt.Sprintf("Failed to upload file to GCS: %v", err),
 		})
+		uploadSpan.RecordError(err)
+		uploadSpan.SetStatus(codes.Error, err.Error())
+		uploadSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		http.Error(w, fmt.Sprintf("Failed to upload file: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -314,9 +340,16 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 			Severity: logging.Error,
 			Payload:  fmt.Sprintf("Failed to finalize GCS upload: %v", err),
 		})
+		uploadSpan.RecordError(err)
+		uploadSpan.SetStatus(codes.Error, err.Error())
+		uploadSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		http.Error(w, fmt.Sprintf("Failed to finalize upload: %v", err), http.StatusInternalServerError)
 		return
 	}
+	uploadSpan.End()
+
 	// Debug: Log upload completion
 	th.logger.Log(logging.Entry{
 		Severity: logging.Debug,
@@ -329,6 +362,8 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 			Severity: logging.Error,
 			Payload:  fmt.Sprintf("Failed to get GCS object attributes: %v", err),
 		})
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		http.Error(w, fmt.Sprintf("Failed to get object attributes: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -343,20 +378,30 @@ func (th *TraceHandler) CreateTrace(w http.ResponseWriter, r *http.Request) {
 	trace.UserID = userID
 	trace.FileName = header.Filename
 	trace.BucketPath = bucketPath
+
 	// Debug: Log trace creation attempt
 	th.logger.Log(logging.Entry{
 		Severity: logging.Debug,
 		Payload:  fmt.Sprintf("Creating trace in database: user_id=%s, filename=%s", trace.UserID, trace.FileName),
 	})
+
+	// Create a child span for database operation
+	_, dbSpan := otel.Tracer("api-server").Start(ctx, "CreateTraceDB")
 	err = th.tr.CreateTrace(&trace)
 	if err != nil {
 		th.logger.Log(logging.Entry{
 			Severity: logging.Error,
 			Payload:  fmt.Sprintf("Failed to create trace in database: %v", err),
 		})
+		dbSpan.RecordError(err)
+		dbSpan.SetStatus(codes.Error, err.Error())
+		dbSpan.End()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	dbSpan.End()
 
 	th.logger.Log(logging.Entry{
 		Severity: logging.Info,
